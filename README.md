@@ -5,7 +5,7 @@
 [![Build](https://img.shields.io/github/actions/workflow/status/rasuvaeff/yii3-turnstile/build.yml?branch=master)](https://github.com/rasuvaeff/yii3-turnstile/actions)
 [![Static analysis](https://img.shields.io/github/actions/workflow/status/rasuvaeff/yii3-turnstile/static-analysis.yml?branch=master&label=static%20analysis)](https://github.com/rasuvaeff/yii3-turnstile/actions)
 [![Coverage](https://codecov.io/gh/rasuvaeff/yii3-turnstile/branch/master/graph/badge.svg)](https://codecov.io/gh/rasuvaeff/yii3-turnstile)
-[![Psalm level](https://shepherd.dev/github/rasuvaeff/yii3-turnstile/level.svg)](https://shepherd.dev/github/rasuvaeff/yii3-turnstile)
+[![Psalm level](https://img.shields.io/badge/psalm-level%201-141F48?logo=psalm&logoColor=white)](https://github.com/rasuvaeff/yii3-turnstile/blob/master/psalm.xml)
 [![License](https://img.shields.io/packagist/l/rasuvaeff/yii3-turnstile)](LICENSE.md)
 
 Cloudflare Turnstile CAPTCHA widget and server-side validator for Yii3.
