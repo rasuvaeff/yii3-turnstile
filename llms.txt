@@ -1,0 +1,156 @@
+# yii3-turnstile
+
+Cloudflare Turnstile CAPTCHA widget and validator for Yii3.
+
+## Install
+
+```bash
+composer require rasuvaeff/yii3-turnstile
+```
+
+## Rules
+
+- `declare(strict_types=1)` in every file.
+- `final readonly class` by default. `final class` only when clone-based immutability is needed.
+- `#[\Override]` on every interface/parent method implementation.
+- No `@psalm-suppress` — fix the root cause.
+- Secret key must never appear in client-side output.
+
+## API reference
+
+### Turnstile (widget)
+
+Renders Cloudflare Turnstile HTML. Extends `Yiisoft\Widget\Widget`.
+
+```php
+use Rasuvaeff\Yii3Turnstile\Turnstile;
+use Rasuvaeff\Yii3Turnstile\TurnstileTheme;
+use Rasuvaeff\Yii3Turnstile\TurnstileSize;
+
+$html = Turnstile::widget()
+    ->withSiteKey('site-key')
+    ->withTheme(TurnstileTheme::Light)
+    ->withSize(TurnstileSize::Compact)
+    ->withResponseFieldName('cf-turnstile-response')
+    ->withJsApiUrl('https://challenges.cloudflare.com/turnstile/v0/api.js')
+    ->render();
+```
+
+Fluent setters (`with*`) return a new cloned instance. `render()` throws
+`RuntimeException` if `siteKey` was not set.
+
+Output:
+
+```html
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<div class="cf-turnstile" data-sitekey="site-key" data-response-field-name="cf-turnstile-response" data-theme="light" data-size="compact"></div>
+```
+
+### TurnstileConfig
+
+Immutable configuration DTO.
+
+```php
+use Rasuvaeff\Yii3Turnstile\TurnstileConfig;
+
+$config = new TurnstileConfig(
+    siteKey: 'site-key',
+    secret: 'secret-key',
+    verifyUrl: 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+    sendRemoteIp: false,
+);
+```
+
+### TurnstileClient
+
+Verifies tokens via Cloudflare's siteverify API. Requires PSR-18 + PSR-17.
+
+```php
+use Rasuvaeff\Yii3Turnstile\TurnstileClient;
+use Nyholm\Psr7\Factory\Psr17Factory;
+use GuzzleHttp\Client;
+
+$client = new TurnstileClient(
+    config: $config,
+    httpClient: new Client(),
+    requestFactory: new Psr17Factory(),
+    streamFactory: new Psr17Factory(),
+);
+
+$result = $client->verify(token: 'turnstile-token', clientIp: '1.2.3.4', idempotencyKey: 'uuid-v4');
+// $client->verifyWithSecret(token: '...', secret: 'override', clientIp: null, idempotencyKey: null);
+```
+
+`clientIp` is only sent when `$config->sendRemoteIp === true`. `idempotencyKey`
+(optional UUID) is sent only when provided and lets you re-verify the same token
+idempotently. `verifyWithSecret()` overrides the config secret (used by the rule
+handler when a per-rule `secret` is set).
+
+In the validator pipeline the handler resolves `clientIp` from the current
+request via `yiisoft/request-provider` (`RequestProviderInterface`, `REMOTE_ADDR`),
+not from validation-context parameters.
+
+### VerificationResult
+
+```php
+final readonly class VerificationResult
+{
+    public bool $success;
+    public array $errorCodes;      // string[]
+    public ?string $hostname;
+    public ?string $action;
+    public ?string $challengeTs;
+}
+```
+
+### TurnstileRule / TurnstileRuleHandler
+
+Yii validator rule. Handler gets `TurnstileClient` via DI.
+
+```php
+use Rasuvaeff\Yii3Turnstile\TurnstileRule;
+
+class LoginForm
+{
+    #[TurnstileRule(
+        message: 'Captcha verification failed',
+        sendRemoteIp: true,
+    )]
+    public string $captcha = '';
+}
+```
+
+Constructor parameters:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `message` | `string` | `'The CAPTCHA verification failed.'` | Error message. |
+| `secret` | `?string` | `null` | Override secret (uses DI config if null). |
+| `sendRemoteIp` | `bool` | `false` | Forward client IP to Cloudflare. |
+| `skipOnEmpty` | `bool\|callable\|null` | `null` | Skip validation on empty value. |
+| `skipOnError` | `bool` | `false` | Skip if a previous rule already failed. |
+| `when` | `?Closure` | `null` | Conditional execution. |
+
+### Enums
+
+```php
+enum TurnstileTheme: string  { case Auto = 'auto'; case Light = 'light'; case Dark = 'dark'; }
+enum TurnstileSize: string   { case Normal = 'normal'; case Compact = 'compact'; case Flexible = 'flexible'; }
+```
+
+### DI config (yiisoft/config)
+
+```php
+// config/params.php
+return [
+    'rasuvaeff/yii3-turnstile' => [
+        'siteKey' => $_ENV['TURNSTILE_SITE_KEY'],
+        'secret' => $_ENV['TURNSTILE_SECRET'],
+        'verifyUrl' => 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        'sendRemoteIp' => false,
+    ],
+];
+
+// config/di.php — auto-wired by yiisoft/config
+// Registers TurnstileConfig and TurnstileRuleHandler in the container.
+```
