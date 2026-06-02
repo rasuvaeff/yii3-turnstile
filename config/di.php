@@ -10,8 +10,6 @@ use Yiisoft\Translator\IdMessageReader;
 use Yiisoft\Translator\IntlMessageFormatter;
 use Yiisoft\Translator\Message\Php\MessageSource;
 use Yiisoft\Translator\SimpleMessageFormatter;
-use Yiisoft\Validator\RuleHandlerResolver\RuleHandlerContainer;
-use Yiisoft\Validator\RuleHandlerResolverInterface;
 
 /** @var array $params */
 
@@ -29,7 +27,6 @@ return [
             'translationCategory' => $params['rasuvaeff/yii3-turnstile']['translation.category'],
         ],
     ],
-    RuleHandlerResolverInterface::class => RuleHandlerContainer::class,
     'yii3-turnstile.categorySource' => [
         'definition' => static function () use ($params): CategorySource {
             $reader = class_exists(MessageSource::class)
