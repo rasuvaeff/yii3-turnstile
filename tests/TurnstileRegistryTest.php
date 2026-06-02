@@ -175,6 +175,7 @@ final class TurnstileRegistryTest extends TestCase
         $psr17 = new Psr17Factory();
         $httpClient = $this->createMock(ClientInterface::class);
         $httpClient->method('sendRequest')->willReturn(new Response(200, [], $responseBody));
+
         return new TurnstileClient(config: $config, httpClient: $httpClient, requestFactory: $psr17, streamFactory: $psr17);
     }
 }
