@@ -72,6 +72,7 @@
     },
     "extra": {
         "config-plugin": {
+            "bootstrap": "bootstrap.php",
             "di": "di.php",
             "params": "params.php"
         },

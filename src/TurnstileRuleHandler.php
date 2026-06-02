@@ -19,11 +19,18 @@ use Yiisoft\Validator\ValidationContext;
 final readonly class TurnstileRuleHandler implements RuleHandlerInterface
 {
     public function __construct(
-        private TurnstileClient $client,
+        private ?TurnstileClient $client = null,
         private ?RequestProviderInterface $requestProvider = null,
         private ?TranslatorInterface $translator = null,
         private string $translationCategory = 'yii3-turnstile',
     ) {}
+
+    private function client(): TurnstileClient
+    {
+        return $this->client
+            ?? TurnstileRegistry::client()
+            ?? throw new \RuntimeException('TurnstileClient is not available. Ensure rasuvaeff/yii3-turnstile bootstrap is registered.');
+    }
 
     #[\Override]
     public function validate(mixed $value, RuleInterface $rule, ValidationContext $context): Result
@@ -49,8 +56,8 @@ final readonly class TurnstileRuleHandler implements RuleHandlerInterface
 
         $secret = $rule->getSecret();
         $verificationResult = $secret !== null
-            ? $this->client->verifyWithSecret(token: $value, secret: $secret, clientIp: $clientIp)
-            : $this->client->verify(token: $value, clientIp: $clientIp);
+            ? $this->client()->verifyWithSecret(token: $value, secret: $secret, clientIp: $clientIp)
+            : $this->client()->verify(token: $value, clientIp: $clientIp);
 
         if (!$verificationResult->success) {
             return $result->addError(
@@ -67,11 +74,12 @@ final readonly class TurnstileRuleHandler implements RuleHandlerInterface
 
     private function translate(string $message): string
     {
-        if ($this->translator === null) {
+        $translator = $this->translator ?? TurnstileRegistry::translator();
+        if ($translator === null) {
             return $message;
         }
 
-        return $this->translator->translate(
+        return $translator->translate(
             $message,
             [],
             $this->translationCategory,
@@ -80,12 +88,13 @@ final readonly class TurnstileRuleHandler implements RuleHandlerInterface
 
     private function resolveClientIp(): ?string
     {
-        if ($this->requestProvider === null) {
+        $provider = $this->requestProvider ?? TurnstileRegistry::requestProvider();
+        if ($provider === null) {
             return null;
         }
 
         try {
-            $serverParams = $this->requestProvider->get()->getServerParams();
+            $serverParams = $provider->get()->getServerParams();
         } catch (RequestNotSetException) {
             return null;
         }
