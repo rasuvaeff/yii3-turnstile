@@ -169,4 +169,62 @@ final class TurnstileClientTest extends TestCase
         $this->assertSame('login', $result->action);
         $this->assertSame('2026-01-01T00:00:00Z', $result->challengeTs);
     }
+
+    #[Test]
+    public function verifySendRemoteIpWithEmptyClientIpOmitsRemoteIp(): void
+    {
+        // array_filter strips empty strings: remoteip='' must not appear in the body
+        $config = new TurnstileConfig(siteKey: 'key', secret: 'secret', sendRemoteIp: true);
+        $psr17 = new Psr17Factory();
+        $httpClient = $this->createMock(ClientInterface::class);
+        $httpClient->method('sendRequest')->willReturnCallback(
+            function (RequestInterface $request): Response {
+                $this->lastRequest = $request;
+
+                return new Response(200, [], '{"success":true}');
+            },
+        );
+        $client = new TurnstileClient(config: $config, httpClient: $httpClient, requestFactory: $psr17, streamFactory: $psr17);
+
+        $client->verify(token: 'token', clientIp: '');
+
+        $this->assertNotNull($this->lastRequest);
+        $this->assertStringNotContainsString('remoteip', $this->lastRequest->getBody()->__toString());
+    }
+
+    #[Test]
+    public function verifyParsesJsonAtMaxAllowedDepth(): void
+    {
+        // PHP json_decode uses strict depth < limit, so depth:512 accepts up to 511 levels.
+        // Root object = 1 level, plus 510 nested arrays = 511 total → succeeds.
+        // The depth:511 decrement-mutant would have 511 < 511 = false → JsonException → kills mutant.
+        $inner = 'true';
+        for ($i = 0; $i < 510; $i++) {
+            $inner = '[' . $inner . ']';
+        }
+        $json = '{"success":true,"_":' . $inner . '}';
+
+        $this->currentResponse = new Response(200, [], $json);
+
+        $result = $this->client->verify(token: 'token');
+
+        $this->assertTrue($result->success);
+    }
+
+    #[Test]
+    public function verifyThrowsForJsonExceedingDepth512(): void
+    {
+        // 511 nested arrays + root object = 512 levels → 512 < 512 = false → original throws.
+        // The depth:513 increment-mutant would have 512 < 513 = true → no exception → kills mutant.
+        $inner = 'true';
+        for ($i = 0; $i < 511; $i++) {
+            $inner = '[' . $inner . ']';
+        }
+        $json = '{"success":true,"_":' . $inner . '}';
+
+        $this->currentResponse = new Response(200, [], $json);
+
+        $this->expectException(\JsonException::class);
+        $this->client->verify(token: 'token');
+    }
 }
