@@ -12,4 +12,5 @@ enum TurnstileSize: string
     case Normal = 'normal';
     case Compact = 'compact';
     case Flexible = 'flexible';
+    case Invisible = 'invisible';
 }
