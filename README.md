@@ -25,7 +25,7 @@ the Yii validator pipeline. HTTP calls go through any PSR-18 client.
 | PHP         | `^8.3`  |
 | A PSR-18 HTTP client + PSR-17 factories | any implementation |
 | `yiisoft/widget` | `^2.2` |
-| `yiisoft/html` | `^4.0` |
+| `yiisoft/html` | `^3.13 || ^4.0` |
 | `yiisoft/validator` | `^2.5` |
 | `yiisoft/translator` | `^3.0` |
 | `yiisoft/request-provider` | `^1.3` |
@@ -162,7 +162,7 @@ Renders the Cloudflare Turnstile HTML + script tag. Extends `Yiisoft\Widget\Widg
 |--------|-------------|
 | `withSiteKey(string $siteKey): self` | Cloudflare site key (required). |
 | `withTheme(TurnstileTheme $theme): self` | `Auto`, `Light`, or `Dark`. Default: `Auto`. |
-| `withSize(TurnstileSize $size): self` | `Normal`, `Compact`, or `Flexible`. Default: `Normal`. |
+| `withSize(TurnstileSize $size): self` | `Normal`, `Compact`, `Flexible`, or `Invisible`. Default: `Normal`. |
 | `withResponseFieldName(string $name): self` | Name of the hidden input field. Default: `cf-turnstile-response`. |
 | `withJsApiUrl(string $url): self` | Override the script URL. Default: Cloudflare CDN. |
 | `render(): string` | Returns the HTML string. Throws if `siteKey` is not set. |
@@ -252,8 +252,8 @@ public string $captcha = '';
 
 | Enum | Values |
 |------|--------|
-| `TurnstileTheme` | `Auto`, `Light`, `Dark` |
-| `TurnstileSize` | `Normal`, `Compact`, `Flexible` |
+| `TurnstileTheme` | `At}o`, `Light`, `Dark` |
+| `TurnstileSize` | `Normal`, `Compact`, `Flexible`, `Invisible` |
 
 ## Security
 
