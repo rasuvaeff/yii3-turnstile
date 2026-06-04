@@ -135,7 +135,7 @@ Constructor parameters:
 
 ```php
 enum TurnstileTheme: string  { case Auto = 'auto'; case Light = 'light'; case Dark = 'dark'; }
-enum TurnstileSize: string   { case Normal = 'normal'; case Compact = 'compact'; case Flexible = 'flexible'; }
+enum TurnstileSize: string   { case Normal = 'normal'; case Compact = 'compact'; case Flexible = 'flexible'; case Invisible = 'invisible'; }
 ```
 
 ### DI config (yiisoft/config)
