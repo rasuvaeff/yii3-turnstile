@@ -18,5 +18,6 @@ final class TurnstileSizeTest extends TestCase
         $this->assertSame('normal', TurnstileSize::Normal->value);
         $this->assertSame('compact', TurnstileSize::Compact->value);
         $this->assertSame('flexible', TurnstileSize::Flexible->value);
+        $this->assertSame('invisible', TurnstileSize::Invisible->value);
     }
 }
