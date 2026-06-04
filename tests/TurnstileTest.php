@@ -59,6 +59,17 @@ final class TurnstileTest extends TestCase
     }
 
     #[Test]
+    public function rendersInvisibleSizeAttribute(): void
+    {
+        $html = Turnstile::widget()
+            ->withSiteKey('key')
+            ->withSize(TurnstileSize::Invisible)
+            ->render();
+
+        $this->assertStringContainsString('data-size="invisible"', $html);
+    }
+
+    #[Test]
     public function rendersResponseFieldName(): void
     {
         $html = Turnstile::widget()
@@ -151,6 +162,17 @@ final class TurnstileTest extends TestCase
         $this->assertNotSame($widget, $new);
         $this->assertStringContainsString('data-size="normal"', $widget->render());
         $this->assertStringContainsString('data-size="compact"', $new->render());
+    }
+
+    #[Test]
+    public function withSizeInvisibleDoesNotMutateOriginalInstance(): void
+    {
+        $widget = Turnstile::widget()->withSiteKey('key')->withSize(TurnstileSize::Normal);
+        $new = $widget->withSize(TurnstileSize::Invisible);
+
+        $this->assertNotSame($widget, $new);
+        $this->assertStringContainsString('data-size="normal"', $widget->render());
+        $this->assertStringContainsString('data-size="invisible"', $new->render());
     }
 
     #[Test]
