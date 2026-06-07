@@ -288,7 +288,7 @@ Or with Make:
 ```bash
 make install
 make build
-make cs:fix
+make cs-fix
 make test
 ```
 
