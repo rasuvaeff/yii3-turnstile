@@ -4,39 +4,39 @@ declare(strict_types=1);
 
 namespace Rasuvaeff\Yii3Turnstile\Tests;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
 use Rasuvaeff\Yii3Turnstile\Turnstile;
 use Rasuvaeff\Yii3Turnstile\TurnstileConfig;
 use Rasuvaeff\Yii3Turnstile\TurnstileSize;
 use Rasuvaeff\Yii3Turnstile\TurnstileTheme;
+use Testo\Assert;
+use Testo\Codecov\Covers;
+use Testo\Lifecycle\BeforeTest;
+use Testo\Test;
 use Yiisoft\Widget\WidgetFactory;
 
-#[CoversClass(Turnstile::class)]
-final class TurnstileTest extends TestCase
+#[Test]
+#[Covers(Turnstile::class)]
+final class TurnstileTest
 {
-    #[\Override]
-    protected function setUp(): void
+    #[BeforeTest]
+    public function setUp(): void
     {
         WidgetFactory::initialize();
     }
 
-    #[Test]
     public function rendersScriptAndDiv(): void
     {
         $html = Turnstile::widget()
             ->withSiteKey('test-key')
             ->render();
 
-        $this->assertStringContainsString('src="https://challenges.cloudflare.com/turnstile/v0/api.js"', $html);
-        $this->assertStringContainsString('async', $html);
-        $this->assertStringContainsString('defer', $html);
-        $this->assertStringContainsString('cf-turnstile', $html);
-        $this->assertStringContainsString('data-sitekey="test-key"', $html);
+        Assert::string($html)->contains('src="https://challenges.cloudflare.com/turnstile/v0/api.js"');
+        Assert::string($html)->contains('async');
+        Assert::string($html)->contains('defer');
+        Assert::string($html)->contains('cf-turnstile');
+        Assert::string($html)->contains('data-sitekey="test-key"');
     }
 
-    #[Test]
     public function rendersThemeAttribute(): void
     {
         $html = Turnstile::widget()
@@ -44,10 +44,9 @@ final class TurnstileTest extends TestCase
             ->withTheme(TurnstileTheme::Dark)
             ->render();
 
-        $this->assertStringContainsString('data-theme="dark"', $html);
+        Assert::string($html)->contains('data-theme="dark"');
     }
 
-    #[Test]
     public function rendersSizeAttribute(): void
     {
         $html = Turnstile::widget()
@@ -55,10 +54,9 @@ final class TurnstileTest extends TestCase
             ->withSize(TurnstileSize::Compact)
             ->render();
 
-        $this->assertStringContainsString('data-size="compact"', $html);
+        Assert::string($html)->contains('data-size="compact"');
     }
 
-    #[Test]
     public function rendersInvisibleSizeAttribute(): void
     {
         $html = Turnstile::widget()
@@ -66,10 +64,9 @@ final class TurnstileTest extends TestCase
             ->withSize(TurnstileSize::Invisible)
             ->render();
 
-        $this->assertStringContainsString('data-size="invisible"', $html);
+        Assert::string($html)->contains('data-size="invisible"');
     }
 
-    #[Test]
     public function rendersResponseFieldName(): void
     {
         $html = Turnstile::widget()
@@ -77,37 +74,47 @@ final class TurnstileTest extends TestCase
             ->withResponseFieldName('myCaptcha')
             ->render();
 
-        $this->assertStringContainsString('data-response-field-name="myCaptcha"', $html);
+        Assert::string($html)->contains('data-response-field-name="myCaptcha"');
     }
 
-    #[Test]
     public function throwsWhenSiteKeyNotSet(): void
     {
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('siteKey is required');
-
-        Turnstile::widget()->render();
+        try {
+            Turnstile::widget()->render();
+            Assert::fail('Expected RuntimeException');
+        } catch (\RuntimeException $e) {
+            Assert::string($e->getMessage())->contains('siteKey is required');
+        }
     }
 
-    #[Test]
+    public function emptySiteKeyInConfigIsTreatedAsUnset(): void
+    {
+        $config = new TurnstileConfig(siteKey: '', secret: 'secret');
+
+        try {
+            (new Turnstile(config: $config))->render();
+            Assert::fail('Expected RuntimeException');
+        } catch (\RuntimeException $e) {
+            Assert::string($e->getMessage())->contains('siteKey is required');
+        }
+    }
+
     public function usesSiteKeyFromConfig(): void
     {
         $config = new TurnstileConfig(siteKey: 'config-key', secret: 'secret');
         $html = (new Turnstile(config: $config))->render();
 
-        $this->assertStringContainsString('data-sitekey="config-key"', $html);
+        Assert::string($html)->contains('data-sitekey="config-key"');
     }
 
-    #[Test]
     public function withSiteKeyOverridesConfig(): void
     {
         $config = new TurnstileConfig(siteKey: 'config-key', secret: 'secret');
         $html = (new Turnstile(config: $config))->withSiteKey('override-key')->render();
 
-        $this->assertStringContainsString('data-sitekey="override-key"', $html);
+        Assert::string($html)->contains('data-sitekey="override-key"');
     }
 
-    #[Test]
     public function customJsApiUrl(): void
     {
         $html = Turnstile::widget()
@@ -115,85 +122,78 @@ final class TurnstileTest extends TestCase
             ->withJsApiUrl('https://custom.test/api.js')
             ->render();
 
-        $this->assertStringContainsString('src="https://custom.test/api.js"', $html);
+        Assert::string($html)->contains('src="https://custom.test/api.js"');
     }
 
-    #[Test]
     public function renderOutputHasScriptBeforeDiv(): void
     {
         $html = Turnstile::widget()->withSiteKey('key')->render();
 
         $scriptPos = strpos($html, '<script');
         $divPos = strpos($html, '<div');
-        $this->assertNotFalse($scriptPos);
-        $this->assertNotFalse($divPos);
-        $this->assertLessThan($divPos, $scriptPos);
-        $this->assertStringContainsString("</script>\n<div", $html);
+        Assert::notSame($scriptPos, false);
+        Assert::notSame($divPos, false);
+        Assert::true($scriptPos < $divPos);
+        Assert::string($html)->contains("</script>\n<div");
     }
 
-    #[Test]
     public function withSiteKeyDoesNotMutateOriginalInstance(): void
     {
         $widget = Turnstile::widget()->withSiteKey('original');
         $new = $widget->withSiteKey('changed');
 
-        $this->assertNotSame($widget, $new);
-        $this->assertStringContainsString('data-sitekey="original"', $widget->render());
-        $this->assertStringContainsString('data-sitekey="changed"', $new->render());
+        Assert::notSame($widget, $new);
+        Assert::string($widget->render())->contains('data-sitekey="original"');
+        Assert::string($new->render())->contains('data-sitekey="changed"');
     }
 
-    #[Test]
     public function withThemeDoesNotMutateOriginalInstance(): void
     {
         $widget = Turnstile::widget()->withSiteKey('key')->withTheme(TurnstileTheme::Light);
         $new = $widget->withTheme(TurnstileTheme::Dark);
 
-        $this->assertNotSame($widget, $new);
-        $this->assertStringContainsString('data-theme="light"', $widget->render());
-        $this->assertStringContainsString('data-theme="dark"', $new->render());
+        Assert::notSame($widget, $new);
+        Assert::string($widget->render())->contains('data-theme="light"');
+        Assert::string($new->render())->contains('data-theme="dark"');
     }
 
-    #[Test]
     public function withSizeDoesNotMutateOriginalInstance(): void
     {
         $widget = Turnstile::widget()->withSiteKey('key')->withSize(TurnstileSize::Normal);
         $new = $widget->withSize(TurnstileSize::Compact);
 
-        $this->assertNotSame($widget, $new);
-        $this->assertStringContainsString('data-size="normal"', $widget->render());
-        $this->assertStringContainsString('data-size="compact"', $new->render());
+        Assert::notSame($widget, $new);
+        Assert::string($widget->render())->contains('data-size="normal"');
+        Assert::string($new->render())->contains('data-size="compact"');
     }
 
-    #[Test]
     public function withSizeInvisibleDoesNotMutateOriginalInstance(): void
     {
         $widget = Turnstile::widget()->withSiteKey('key')->withSize(TurnstileSize::Normal);
         $new = $widget->withSize(TurnstileSize::Invisible);
 
-        $this->assertNotSame($widget, $new);
-        $this->assertStringContainsString('data-size="normal"', $widget->render());
-        $this->assertStringContainsString('data-size="invisible"', $new->render());
+        Assert::notSame($widget, $new);
+        Assert::string($widget->render())->contains('data-size="normal"');
+        Assert::string($new->render())->contains('data-size="invisible"');
     }
 
-    #[Test]
     public function withResponseFieldNameDoesNotMutateOriginalInstance(): void
     {
         $widget = Turnstile::widget()->withSiteKey('key')->withResponseFieldName('original-name');
         $new = $widget->withResponseFieldName('changed-name');
 
-        $this->assertNotSame($widget, $new);
-        $this->assertStringContainsString('data-response-field-name="original-name"', $widget->render());
-        $this->assertStringContainsString('data-response-field-name="changed-name"', $new->render());
+        Assert::notSame($widget, $new);
+        Assert::string($widget->render())->contains('data-response-field-name="original-name"');
+        Assert::string($new->render())->contains('data-response-field-name="changed-name"');
     }
 
-    #[Test]
     public function withJsApiUrlDoesNotMutateOriginalInstance(): void
     {
         $widget = Turnstile::widget()->withSiteKey('key')->withJsApiUrl('https://original.test/api.js');
         $new = $widget->withJsApiUrl('https://changed.test/api.js');
 
-        $this->assertNotSame($widget, $new);
-        $this->assertStringContainsString('src="https://original.test/api.js"', $widget->render());
-        $this->assertStringContainsString('src="https://changed.test/api.js"', $new->render());
+        Assert::notSame($widget, $new);
+        Assert::string($widget->render())->contains('src="https://original.test/api.js"');
+        Assert::string($new->render())->contains('src="https://changed.test/api.js"');
     }
 }
