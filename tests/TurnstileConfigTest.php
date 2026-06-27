@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Rasuvaeff\Yii3Turnstile\Tests;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
 use Rasuvaeff\Yii3Turnstile\TurnstileConfig;
+use Testo\Assert;
+use Testo\Codecov\Covers;
+use Testo\Test;
 
-#[CoversClass(TurnstileConfig::class)]
-final class TurnstileConfigTest extends TestCase
+#[Test]
+#[Covers(TurnstileConfig::class)]
+final class TurnstileConfigTest
 {
-    #[Test]
     public function storesAllValues(): void
     {
         $config = new TurnstileConfig(
@@ -22,13 +22,12 @@ final class TurnstileConfigTest extends TestCase
             sendRemoteIp: true,
         );
 
-        $this->assertSame('test-key', $config->siteKey);
-        $this->assertSame('test-secret', $config->secret);
-        $this->assertSame('https://example.com/verify', $config->verifyUrl);
-        $this->assertTrue($config->sendRemoteIp);
+        Assert::same($config->siteKey, 'test-key');
+        Assert::same($config->secret, 'test-secret');
+        Assert::same($config->verifyUrl, 'https://example.com/verify');
+        Assert::true($config->sendRemoteIp);
     }
 
-    #[Test]
     public function usesDefaults(): void
     {
         $config = new TurnstileConfig(
@@ -36,7 +35,7 @@ final class TurnstileConfigTest extends TestCase
             secret: 'secret',
         );
 
-        $this->assertSame('https://challenges.cloudflare.com/turnstile/v0/siteverify', $config->verifyUrl);
-        $this->assertFalse($config->sendRemoteIp);
+        Assert::same($config->verifyUrl, 'https://challenges.cloudflare.com/turnstile/v0/siteverify');
+        Assert::false($config->sendRemoteIp);
     }
 }

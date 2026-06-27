@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace Rasuvaeff\Yii3Turnstile\Tests;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
 use Rasuvaeff\Yii3Turnstile\TurnstileSize;
+use Testo\Assert;
+use Testo\Codecov\Covers;
+use Testo\Test;
 
-#[CoversClass(TurnstileSize::class)]
-final class TurnstileSizeTest extends TestCase
+#[Test]
+#[Covers(TurnstileSize::class)]
+final class TurnstileSizeTest
 {
-    #[Test]
     public function hasExpectedCases(): void
     {
-        $this->assertSame('normal', TurnstileSize::Normal->value);
-        $this->assertSame('compact', TurnstileSize::Compact->value);
-        $this->assertSame('flexible', TurnstileSize::Flexible->value);
-        $this->assertSame('invisible', TurnstileSize::Invisible->value);
+        Assert::same(TurnstileSize::Normal->value, 'normal');
+        Assert::same(TurnstileSize::Compact->value, 'compact');
+        Assert::same(TurnstileSize::Flexible->value, 'flexible');
+        Assert::same(TurnstileSize::Invisible->value, 'invisible');
     }
 }

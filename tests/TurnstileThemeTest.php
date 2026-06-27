@@ -4,26 +4,23 @@ declare(strict_types=1);
 
 namespace Rasuvaeff\Yii3Turnstile\Tests;
 
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
 use Rasuvaeff\Yii3Turnstile\TurnstileTheme;
+use Testo\Assert;
+use Testo\Codecov\Covers;
+use Testo\Data\DataProvider;
+use Testo\Test;
 
-#[CoversClass(TurnstileTheme::class)]
-final class TurnstileThemeTest extends TestCase
+#[Test]
+#[Covers(TurnstileTheme::class)]
+final class TurnstileThemeTest
 {
-    #[Test]
     public function hasExpectedCases(): void
     {
-        $this->assertSame('auto', TurnstileTheme::Auto->value);
-        $this->assertSame('light', TurnstileTheme::Light->value);
-        $this->assertSame('dark', TurnstileTheme::Dark->value);
+        Assert::same(TurnstileTheme::Auto->value, 'auto');
+        Assert::same(TurnstileTheme::Light->value, 'light');
+        Assert::same(TurnstileTheme::Dark->value, 'dark');
     }
 
-    /**
-     * @return iterable<string, array{TurnstileTheme}>
-     */
     public static function allCasesProvider(): iterable
     {
         yield 'auto' => [TurnstileTheme::Auto];
@@ -32,9 +29,8 @@ final class TurnstileThemeTest extends TestCase
     }
 
     #[DataProvider('allCasesProvider')]
-    #[Test]
     public function allCasesHaveNonEmptyValue(TurnstileTheme $theme): void
     {
-        $this->assertNotEmpty($theme->value);
+        Assert::true($theme->value !== '' && $theme->value !== []);
     }
 }

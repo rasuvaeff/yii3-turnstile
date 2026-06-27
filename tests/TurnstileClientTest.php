@@ -6,23 +6,29 @@ namespace Rasuvaeff\Yii3Turnstile\Tests;
 
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response;
-use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\TestCase;
-use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Rasuvaeff\Yii3Turnstile\TurnstileClient;
 use Rasuvaeff\Yii3Turnstile\TurnstileConfig;
+use Testo\Assert;
+use Testo\Codecov\Covers;
+use Testo\Expect;
+use Testo\Lifecycle\BeforeTest;
+use Testo\Test;
 
-#[CoversClass(TurnstileClient::class)]
-final class TurnstileClientTest extends TestCase
+#[Test]
+#[Covers(TurnstileClient::class)]
+final class TurnstileClientTest
 {
     private TurnstileConfig $config;
+
     private ?RequestInterface $lastRequest = null;
+
     private TurnstileClient $client;
 
-    #[\Override]
-    protected function setUp(): void
+    private Response $currentResponse;
+
+    #[BeforeTest]
+    public function setUp(): void
     {
         $this->config = new TurnstileConfig(
             siteKey: 'test-site-key',
@@ -32,8 +38,7 @@ final class TurnstileClientTest extends TestCase
         $this->lastRequest = null;
         $psr17 = new Psr17Factory();
 
-        $httpClient = $this->createMock(ClientInterface::class);
-        $httpClient->method('sendRequest')->willReturnCallback(
+        $httpClient = (new FakeHttpClient())->withSendRequestCallback(
             function (RequestInterface $request): Response {
                 $this->lastRequest = $request;
 
@@ -49,88 +54,78 @@ final class TurnstileClientTest extends TestCase
         );
     }
 
-    private Response $currentResponse;
-
-    #[Test]
     public function verifySuccess(): void
     {
         $this->currentResponse = new Response(200, [], '{"success":true,"hostname":"example.com"}');
 
         $result = $this->client->verify(token: 'valid-token');
 
-        $this->assertTrue($result->success);
-        $this->assertSame('example.com', $result->hostname);
+        Assert::true($result->success);
+        Assert::same($result->hostname, 'example.com');
     }
 
-    #[Test]
     public function verifyFailure(): void
     {
         $this->currentResponse = new Response(200, [], '{"success":false,"error-codes":["invalid-input-response"]}');
 
         $result = $this->client->verify(token: 'bad-token');
 
-        $this->assertFalse($result->success);
-        $this->assertSame(['invalid-input-response'], $result->errorCodes);
+        Assert::false($result->success);
+        Assert::same($result->errorCodes, ['invalid-input-response']);
     }
 
-    #[Test]
     public function verifySendsPostWithSecretAndToken(): void
     {
         $this->currentResponse = new Response(200, [], '{"success":true}');
 
         $this->client->verify(token: 'my-token');
 
-        $this->assertNotNull($this->lastRequest);
-        $this->assertSame('POST', $this->lastRequest->getMethod());
+        Assert::notNull($this->lastRequest);
+        Assert::same($this->lastRequest->getMethod(), 'POST');
         $body = $this->lastRequest->getBody()->__toString();
-        $this->assertStringContainsString('secret=test-secret', $body);
-        $this->assertStringContainsString('response=my-token', $body);
+        Assert::string($body)->contains('secret=test-secret');
+        Assert::string($body)->contains('response=my-token');
     }
 
-    #[Test]
     public function verifyWithSecretUsesCustomSecret(): void
     {
         $this->currentResponse = new Response(200, [], '{"success":true}');
 
         $this->client->verifyWithSecret(token: 'token', secret: 'custom-secret');
 
-        $this->assertNotNull($this->lastRequest);
+        Assert::notNull($this->lastRequest);
         $body = $this->lastRequest->getBody()->__toString();
-        $this->assertStringContainsString('secret=custom-secret', $body);
-        $this->assertStringNotContainsString('secret=test-secret', $body);
+        Assert::string($body)->contains('secret=custom-secret');
+        Assert::string($body)->notContains('secret=test-secret');
     }
 
-    #[Test]
     public function verifySendsIdempotencyKeyWhenProvided(): void
     {
         $this->currentResponse = new Response(200, [], '{"success":true}');
 
         $this->client->verify(token: 'token', idempotencyKey: 'abc-123');
 
-        $this->assertNotNull($this->lastRequest);
+        Assert::notNull($this->lastRequest);
         $body = $this->lastRequest->getBody()->__toString();
-        $this->assertStringContainsString('idempotency_key=abc-123', $body);
+        Assert::string($body)->contains('idempotency_key=abc-123');
     }
 
-    #[Test]
     public function verifyOmitsIdempotencyKeyWhenNotProvided(): void
     {
         $this->currentResponse = new Response(200, [], '{"success":true}');
 
         $this->client->verify(token: 'token');
 
-        $this->assertNotNull($this->lastRequest);
+        Assert::notNull($this->lastRequest);
         $body = $this->lastRequest->getBody()->__toString();
-        $this->assertStringNotContainsString('idempotency_key', $body);
+        Assert::string($body)->notContains('idempotency_key');
     }
 
-    #[Test]
     public function verifySendsRemoteIpWhenConfigured(): void
     {
         $config = new TurnstileConfig(siteKey: 'key', secret: 'secret', sendRemoteIp: true);
         $psr17 = new Psr17Factory();
-        $httpClient = $this->createMock(ClientInterface::class);
-        $httpClient->method('sendRequest')->willReturnCallback(
+        $httpClient = (new FakeHttpClient())->withSendRequestCallback(
             function (RequestInterface $request): Response {
                 $this->lastRequest = $request;
 
@@ -141,43 +136,38 @@ final class TurnstileClientTest extends TestCase
 
         $client->verify(token: 'token', clientIp: '1.2.3.4');
 
-        $this->assertNotNull($this->lastRequest);
+        Assert::notNull($this->lastRequest);
         $body = $this->lastRequest->getBody()->__toString();
-        $this->assertStringContainsString('remoteip=1.2.3.4', $body);
+        Assert::string($body)->contains('remoteip=1.2.3.4');
     }
 
-    #[Test]
     public function verifyOmitsRemoteIpWhenNotConfigured(): void
     {
         $this->currentResponse = new Response(200, [], '{"success":true}');
 
         $this->client->verify(token: 'token', clientIp: '1.2.3.4');
 
-        $this->assertNotNull($this->lastRequest);
+        Assert::notNull($this->lastRequest);
         $body = $this->lastRequest->getBody()->__toString();
-        $this->assertStringNotContainsString('remoteip', $body);
+        Assert::string($body)->notContains('remoteip');
     }
 
-    #[Test]
     public function verifyParsesAllFields(): void
     {
         $this->currentResponse = new Response(200, [], '{"success":true,"hostname":"example.com","action":"login","challenge_ts":"2026-01-01T00:00:00Z"}');
 
         $result = $this->client->verify(token: 'token');
 
-        $this->assertSame('example.com', $result->hostname);
-        $this->assertSame('login', $result->action);
-        $this->assertSame('2026-01-01T00:00:00Z', $result->challengeTs);
+        Assert::same($result->hostname, 'example.com');
+        Assert::same($result->action, 'login');
+        Assert::same($result->challengeTs, '2026-01-01T00:00:00Z');
     }
 
-    #[Test]
     public function verifySendRemoteIpWithEmptyClientIpOmitsRemoteIp(): void
     {
-        // array_filter strips empty strings: remoteip='' must not appear in the body
         $config = new TurnstileConfig(siteKey: 'key', secret: 'secret', sendRemoteIp: true);
         $psr17 = new Psr17Factory();
-        $httpClient = $this->createMock(ClientInterface::class);
-        $httpClient->method('sendRequest')->willReturnCallback(
+        $httpClient = (new FakeHttpClient())->withSendRequestCallback(
             function (RequestInterface $request): Response {
                 $this->lastRequest = $request;
 
@@ -188,16 +178,12 @@ final class TurnstileClientTest extends TestCase
 
         $client->verify(token: 'token', clientIp: '');
 
-        $this->assertNotNull($this->lastRequest);
-        $this->assertStringNotContainsString('remoteip', $this->lastRequest->getBody()->__toString());
+        Assert::notNull($this->lastRequest);
+        Assert::string($this->lastRequest->getBody()->__toString())->notContains('remoteip');
     }
 
-    #[Test]
     public function verifyParsesJsonAtMaxAllowedDepth(): void
     {
-        // PHP json_decode uses strict depth < limit, so depth:512 accepts up to 511 levels.
-        // Root object = 1 level, plus 510 nested arrays = 511 total → succeeds.
-        // The depth:511 decrement-mutant would have 511 < 511 = false → JsonException → kills mutant.
         $inner = 'true';
         for ($i = 0; $i < 510; $i++) {
             $inner = '[' . $inner . ']';
@@ -208,14 +194,11 @@ final class TurnstileClientTest extends TestCase
 
         $result = $this->client->verify(token: 'token');
 
-        $this->assertTrue($result->success);
+        Assert::true($result->success);
     }
 
-    #[Test]
     public function verifyThrowsForJsonExceedingDepth512(): void
     {
-        // 511 nested arrays + root object = 512 levels → 512 < 512 = false → original throws.
-        // The depth:513 increment-mutant would have 512 < 513 = true → no exception → kills mutant.
         $inner = 'true';
         for ($i = 0; $i < 511; $i++) {
             $inner = '[' . $inner . ']';
@@ -224,7 +207,7 @@ final class TurnstileClientTest extends TestCase
 
         $this->currentResponse = new Response(200, [], $json);
 
-        $this->expectException(\JsonException::class);
+        Expect::exception(\JsonException::class);
         $this->client->verify(token: 'token');
     }
 }
