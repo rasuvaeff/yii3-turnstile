@@ -1,5 +1,4 @@
-# rasuvaeff/yii3-turnstile
-
+# rasuvaeff/yii3-турникет
 [![Stable Version](https://img.shields.io/packagist/v/rasuvaeff/yii3-turnstile?label=stable&sort_semver=1)](https://packagist.org/packages/rasuvaeff/yii3-turnstile)
 [![Total Downloads](https://img.shields.io/packagist/dt/rasuvaeff/yii3-turnstile)](https://packagist.org/packages/rasuvaeff/yii3-turnstile)
 [![Build](https://img.shields.io/github/actions/workflow/status/rasuvaeff/yii3-turnstile/build.yml?branch=master)](https://github.com/rasuvaeff/yii3-turnstile/actions)
@@ -7,57 +6,45 @@
 [![Psalm level](https://img.shields.io/badge/psalm-level%201-141F48?logo=psalm&logoColor=white)](https://github.com/rasuvaeff/yii3-turnstile/blob/master/psalm.xml)
 [![PHP](https://img.shields.io/packagist/dependency-v/rasuvaeff/yii3-turnstile/php)](https://packagist.org/packages/rasuvaeff/yii3-turnstile)
 [![License](https://img.shields.io/packagist/l/rasuvaeff/yii3-turnstile)](LICENSE.md)
-[Русская версия](README.ru.md)
+Виджет Cloudflare Turnstile CAPTCHA и серверный валидатор для Yii3.
 
-Cloudflare Turnstile CAPTCHA widget and server-side validator for Yii3.
+ Предоставляет виджет Turnstile для отображения задачи в форме и пару
+ TurnstileRule/TurnstileRuleHandler для проверки на стороне сервера через
+ конвейер валидатора Yii. HTTP-вызовы проходят через любого клиента PSR-18.
 
-Provides a `Turnstile` widget for rendering the challenge in a form and a
-`TurnstileRule` / `TurnstileRuleHandler` pair for server-side verification through
-the Yii validator pipeline. HTTP calls go through any PSR-18 client.
-
-> **Using an AI coding assistant?** [llms.txt](llms.txt) contains a compact
-> API reference you can share with the model. Contributors: see [AGENTS.md](AGENTS.md).
-
-## Requirements
-
-| Requirement | Version |
-|-------------|---------|
-| PHP         | `^8.3`  |
-| A PSR-18 HTTP client + PSR-17 factories | any implementation |
-| `yiisoft/widget` | `^2.2` |
-| `yiisoft/html` | `^3.13 || ^4.0` |
-| `yiisoft/validator` | `^2.5` |
-| `yiisoft/translator` | `^3.0` |
-| `yiisoft/request-provider` | `^1.3` |
-
-## Installation
-
+ > **Используете помощника по кодированию с использованием искусственного интеллекта?** [llms.txt](llms.txt) содержит компактную ссылку
+ > API, которой вы можете поделиться с моделью. Авторы: см. [AGENTS.md](AGENTS.md). @@ЛИНИЯ@@
+## Требования
+| Требование | Версия |
+ |-------------|---------|
+ | PHP | `^8.3` |
+ | HTTP-клиент PSR-18 + фабрики PSR-17 | любая реализация |
+ | `yiisoft/виджет` | `^2.2` |
+ | `yiisoft/html` | `^3.13 || ^4.0` |
+ | `yiisoft/валидатор` | `^2,5` |
+ | `yiisoft/переводчик` | `^3.0` |
+ | `yiisoft/поставщик запросов` | `^1.3` | @@ЛИНИЯ@@
+## Установка
 ```bash
 composer require rasuvaeff/yii3-turnstile
 ```
-
-You also need a PSR-18 client and PSR-17 factories if your project doesn't
-already ship one:
+Вам также понадобится клиент PSR-18 и фабрики PSR-17, если
+ еще не поставляет ваш проект:
 
 ```bash
 composer require nyholm/psr7
 # or: composer require guzzlehttp/guzzle
 ```
+### Конфигурация цифрового входа
+Начиная с версии 1.0.3 пакет поставляется `config/bootstrap.php` через `config-plugin`. При каждой загрузке приложения
+ оно заполняет `TurnstileRegistry` зависимостями обработчика, поэтому
+ `TurnstileRuleHandler` работает даже с `SimpleRuleHandlerContainer` по умолчанию` —
+ **дополнительная настройка DI не требуется**.
 
-### DI configuration
-
-Since v1.0.3 the package ships `config/bootstrap.php` via `config-plugin`. On every
-application boot it populates `TurnstileRegistry` with the handler dependencies, so
-`TurnstileRuleHandler` works even with the default `SimpleRuleHandlerContainer` —
-**no extra DI config required**.
-
-If your app already uses `RuleHandlerContainer` for other reasons, keep it; this
-package is compatible with both resolvers.
-
-## Usage
-
-### 1. Render the widget in a form
-
+ Если ваше приложение уже использует RuleHandlerContainer по другим причинам, сохраните его; этот пакет
+ совместим с обоими преобразователями. @@ЛИНИЯ@@
+## Использование
+### 1. Отобразите виджет в форме.
 ```php
 use Rasuvaeff\Yii3Turnstile\Turnstile;
 use Rasuvaeff\Yii3Turnstile\TurnstileTheme;
@@ -69,16 +56,13 @@ echo Turnstile::widget()
     ->withSize(TurnstileSize::Normal)
     ->withResponseFieldName('turnstileResponse'); // match your FormModel property name
 ```
-
-Output:
+Вывод:
 
 ```html
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <div class="cf-turnstile" data-sitekey="your-site-key" data-response-field-name="cf-turnstile-response" data-theme="light" data-size="normal"></div>
 ```
-
-### 2. Validate server-side with a validator rule
-
+### 2. Проверка на стороне сервера с помощью правила валидатора.
 ```php
 use Rasuvaeff\Yii3Turnstile\TurnstileRule;
 use Yiisoft\Validator\Validator;
@@ -89,22 +73,21 @@ class LoginForm
     public string $turnstileResponse = '';
 }
 ```
+> **Сопоставление имен полей с помощью Yii3 FormModel**
+ >
+ > Виджет Cloudflare отправляет токен как `cf-turnstile-response` (с дефисами) по
+ > по умолчанию. PHP **не** нормализует дефисы в ключах POST, поэтому задайте для
+ > `withResponseFieldName()` PHP-совместимое имя, соответствующее свойству вашей модели:
+ >
+ > ```php
+ > echo Turnstile::widget()->withResponseFieldName('turnstileResponse');
+ > ```
+ >
+ > ```php
+ > #[TurnstileRule]
+ > public string $turnstileResponse = '';
 
-> **Field name mapping with Yii3 FormModel**
->
-> Cloudflare's widget submits the token as `cf-turnstile-response` (with hyphens) by
-> default. PHP does **not** normalize hyphens in POST keys, so set
-> `withResponseFieldName()` to a PHP-compatible name that matches your model property:
->
-> ```php
-> echo Turnstile::widget()->withResponseFieldName('turnstileResponse');
-> ```
->
-> ```php
-> #[TurnstileRule]
-> public string $turnstileResponse = '';
-
-$result = (new Validator())->validate($loginForm);
+ $result = (новый Валидатор())->validate($loginForm);
 ```
 
 The rule sends the token to Cloudflare's `siteverify` endpoint and reports
@@ -117,15 +100,15 @@ The package ships `config/params.php` and `config/di.php` compatible with
 
 ```php
 // config/params.php
-return [
-    'rasuvaeff/yii3-turnstile' => [
-        'siteKey' => $_ENV['TURNSTILE_SITE_KEY'],
-        'secret' => $_ENV['TURNSTILE_SECRET'],
+ return [
+ 'rasuvaeff/yii3-turnstile' => [
+ 'siteKey' => $_ENV['TURNSTILE_SITE_KEY'],
+ 'secret' => $_ENV['TURNSTILE_SECRET'],
         'verifyUrl' => 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-        'sendRemoteIp' => true,
-        'translation.category' => 'yii3-turnstile',
-    ],
-];
+'sendRemoteIp' => true,
+ 'translation.category' => 'yii3-турникет',
+ ],
+ ];
 ```
 
 The DI config registers a `CategorySource` tagged as `translation.categorySource`.
@@ -145,11 +128,11 @@ To add more languages, create `messages/<locale>/yii3-turnstile.php`:
 ```php
 <?php
 
-declare(strict_types=1);
+decreate(strict_types=1);
 
-return [
-    'The CAPTCHA verification failed.' => 'Your translated message.',
-];
+ return [
+ 'Проверка CAPTCHA не удалась.' => 'Ваше переведенное сообщение.',
+ ];
 ```
 
 ## Components
@@ -172,15 +155,15 @@ Renders the Cloudflare Turnstile HTML + script tag. Extends `Yiisoft\Widget\Widg
 Immutable configuration DTO.
 
 ```php
-final readonly class TurnstileConfig
-{
-    public function __construct(
-        public string $siteKey,
-        public string $secret,
+окончательный класс только для чтения TurnstileConfig
+ {
+ public function __construct(
+ public string $siteKey,
+ public string $secret,
         public string $verifyUrl = 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-        public bool $sendRemoteIp = false,
-    ) {}
-}
+public bool $sendRemoteIp = false,
+ ) {}
+ }
 ```
 
 ### `TurnstileClient`
@@ -188,18 +171,17 @@ final readonly class TurnstileConfig
 Sends the token verification POST to Cloudflare. Requires PSR-18 + PSR-17.
 
 ```php
-final readonly class TurnstileClient
-{
-    public function __construct(
-        private TurnstileConfig $config,
-        private ClientInterface $httpClient,
-        private RequestFactoryInterface $requestFactory,
-        private StreamFactoryInterface $streamFactory,
-    ) {}
+окончательный класс только для чтения TurnstileClient
+ {
+ public function __construct(
+ Private TurnstileConfig $config,
+ Private ClientInterface $httpClient,
+ Private RequestFactoryInterface $requestFactory,
+ Private StreamFactoryInterface $streamFactory,
+ ) {}
 
-    public function verify(string $token, ?string $clientIp = null, ?string $idempotencyKey = null): VerificationResult;
-    public function verifyWithSecret(string $token, string $secret, ?string $clientIp = null, ?string $idempotencyKey = null): VerificationResult;
-}
+ public function verification(string $token, ?string $clientIp = null, ?string $idempotencyKey = null): VerificationResult;
+ public functionverifyWithSecret(string $token, string $secret, ?string $clientIp = null, ?string $idempotencyKey = null): VerificationResult; @@ЛИНИЯ@@ }
 ```
 
 `idempotencyKey` is an optional UUID that lets you safely re-verify the same
@@ -212,16 +194,16 @@ per-rule `secret` override is set.
 DTO returned by `TurnstileClient::verify()`.
 
 ```php
-final readonly class VerificationResult
-{
-    public function __construct(
-        public bool $success,
-        public array $errorCodes = [],
-        public ?string $hostname = null,
-        public ?string $action = null,
-        public ?string $challengeTs = null,
-    ) {}
-}
+окончательный класс VerificationResult
+ {
+ public function __construct(
+ public bool $success,
+ public array $errorCodes = [],
+ public ?string $hostname = null,
+ public ?string $action = null,
+ public ?string $challengeTs = null,
+ ) {}
+ }
 ```
 
 ### `TurnstileRule` / `TurnstileRuleHandler`
@@ -234,11 +216,11 @@ server param); if no request is set the IP is simply omitted. Supports
 `skipOnEmpty`, `skipOnError`, and `when` via standard validator traits.
 
 ```php
-#[TurnstileRule(
-    message: 'Custom error message',
-    sendRemoteIp: true,
-)]
-public string $captcha = '';
+#[TurnstileRule( сообщение
+: 'Пользовательское сообщение об ошибке',
+ sendRemoteIp: true,
+ )]
+ public string $captcha = '';
 ```
 
 | Method | Description |
@@ -277,19 +259,19 @@ See [examples/](examples/) for runnable scripts.
 No PHP/Composer on the host — run in Docker via the `composer:2` image:
 
 ```bash
-docker run --rm -v "$PWD":/app -w /app composer:2 composer install
-docker run --rm -v "$PWD":/app -w /app composer:2 composer build
-docker run --rm -v "$PWD":/app -w /app composer:2 composer cs:fix
-docker run --rm -v "$PWD":/app -w /app composer:2 composer test
+docker run --rm -v "$PWD":/app -w /app композитор:2 композитор install
+ docker run --rm -v "$PWD":/app -w /app композитор:2 композитор сборка
+ docker run --rm -v "$PWD":/app -w /app композитор:2 композитор cs:fix
+ docker run --rm -v "$PWD":/app -w /app композитор:2 композитор тест
 ```
 
 Or with Make:
 
 ```bash
 make install
-make build
-make cs-fix
-make test
+ make build
+ make cs-fix
+ make test
 ```
 
 CI runs `composer build` on PHP 8.3, 8.4, and 8.5.
