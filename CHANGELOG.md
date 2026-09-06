@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Tests build their doubles with `rasuvaeff/understudy-testo` instead of
+  hand-written fake classes: `FakeHttpClient`, `FakeRequestProvider` and
+  `FakeTranslator` are gone. Request capture reads a typed `Arg::captor()`,
+  the priority tests claim their call counts with `verify(..., times: 1)` and
+  `Understudy::unused()` instead of public counters, and the anonymous
+  not-a-Turnstile rule is a double too. Rector catches up with two mechanical
+  transforms in `src/` that its current rule set asks for. Dev-dependency
+  only; the public contract is untouched.
+
 ## 1.0.5 — 2026-06-30
 
 - Add `/benchmarks` and `/Makefile` to `.gitattributes` export-ignore.

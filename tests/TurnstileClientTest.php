@@ -6,7 +6,12 @@ namespace Rasuvaeff\Yii3Turnstile\Tests;
 
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response;
+use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
+use Rasuvaeff\Understudy\Arg;
+use Rasuvaeff\Understudy\Captor;
+use Rasuvaeff\Understudy\Invocation;
+use Rasuvaeff\Understudy\Understudy;
 use Rasuvaeff\Yii3Turnstile\TurnstileClient;
 use Rasuvaeff\Yii3Turnstile\TurnstileConfig;
 use Testo\Assert;
@@ -15,13 +20,16 @@ use Testo\Expect;
 use Testo\Lifecycle\BeforeTest;
 use Testo\Test;
 
+use function Rasuvaeff\Understudy\when;
+
 #[Test]
 #[Covers(TurnstileClient::class)]
 final class TurnstileClientTest
 {
     private TurnstileConfig $config;
 
-    private ?RequestInterface $lastRequest = null;
+    /** @var Captor<RequestInterface> */
+    private Captor $requests;
 
     private TurnstileClient $client;
 
@@ -35,16 +43,12 @@ final class TurnstileClientTest
             secret: 'test-secret',
             verifyUrl: 'https://verify.test/turnstile',
         );
-        $this->lastRequest = null;
         $psr17 = new Psr17Factory();
+        $httpClient = Understudy::for(ClientInterface::class);
+        $this->requests = Arg::captor(RequestInterface::class);
 
-        $httpClient = (new FakeHttpClient())->withSendRequestCallback(
-            function (RequestInterface $request): Response {
-                $this->lastRequest = $request;
-
-                return $this->currentResponse;
-            },
-        );
+        when(fn() => $httpClient->sendRequest($this->requests->capture()))
+            ->answers(fn(Invocation $call): Response => $this->currentResponse);
 
         $this->client = new TurnstileClient(
             config: $this->config,
@@ -80,9 +84,8 @@ final class TurnstileClientTest
 
         $this->client->verify(token: 'my-token');
 
-        Assert::notNull($this->lastRequest);
-        Assert::same($this->lastRequest->getMethod(), 'POST');
-        $body = $this->lastRequest->getBody()->__toString();
+        Assert::same($this->requests->last()->getMethod(), 'POST');
+        $body = $this->requests->last()->getBody()->__toString();
         Assert::string($body)->contains('secret=test-secret');
         Assert::string($body)->contains('response=my-token');
     }
@@ -93,8 +96,7 @@ final class TurnstileClientTest
 
         $this->client->verifyWithSecret(token: 'token', secret: 'custom-secret');
 
-        Assert::notNull($this->lastRequest);
-        $body = $this->lastRequest->getBody()->__toString();
+        $body = $this->requests->last()->getBody()->__toString();
         Assert::string($body)->contains('secret=custom-secret');
         Assert::string($body)->notContains('secret=test-secret');
     }
@@ -105,8 +107,7 @@ final class TurnstileClientTest
 
         $this->client->verify(token: 'token', idempotencyKey: 'abc-123');
 
-        Assert::notNull($this->lastRequest);
-        $body = $this->lastRequest->getBody()->__toString();
+        $body = $this->requests->last()->getBody()->__toString();
         Assert::string($body)->contains('idempotency_key=abc-123');
     }
 
@@ -116,8 +117,7 @@ final class TurnstileClientTest
 
         $this->client->verify(token: 'token');
 
-        Assert::notNull($this->lastRequest);
-        $body = $this->lastRequest->getBody()->__toString();
+        $body = $this->requests->last()->getBody()->__toString();
         Assert::string($body)->notContains('idempotency_key');
     }
 
@@ -125,19 +125,16 @@ final class TurnstileClientTest
     {
         $config = new TurnstileConfig(siteKey: 'key', secret: 'secret', sendRemoteIp: true);
         $psr17 = new Psr17Factory();
-        $httpClient = (new FakeHttpClient())->withSendRequestCallback(
-            function (RequestInterface $request): Response {
-                $this->lastRequest = $request;
+        $httpClient = Understudy::for(ClientInterface::class);
 
-                return new Response(200, [], '{"success":true}');
-            },
-        );
+        when(fn() => $httpClient->sendRequest($this->requests->capture()))
+            ->returns(new Response(200, [], '{"success":true}'));
+
         $client = new TurnstileClient(config: $config, httpClient: $httpClient, requestFactory: $psr17, streamFactory: $psr17);
 
         $client->verify(token: 'token', clientIp: '1.2.3.4');
 
-        Assert::notNull($this->lastRequest);
-        $body = $this->lastRequest->getBody()->__toString();
+        $body = $this->requests->last()->getBody()->__toString();
         Assert::string($body)->contains('remoteip=1.2.3.4');
     }
 
@@ -147,8 +144,7 @@ final class TurnstileClientTest
 
         $this->client->verify(token: 'token', clientIp: '1.2.3.4');
 
-        Assert::notNull($this->lastRequest);
-        $body = $this->lastRequest->getBody()->__toString();
+        $body = $this->requests->last()->getBody()->__toString();
         Assert::string($body)->notContains('remoteip');
     }
 
@@ -167,19 +163,16 @@ final class TurnstileClientTest
     {
         $config = new TurnstileConfig(siteKey: 'key', secret: 'secret', sendRemoteIp: true);
         $psr17 = new Psr17Factory();
-        $httpClient = (new FakeHttpClient())->withSendRequestCallback(
-            function (RequestInterface $request): Response {
-                $this->lastRequest = $request;
+        $httpClient = Understudy::for(ClientInterface::class);
 
-                return new Response(200, [], '{"success":true}');
-            },
-        );
+        when(fn() => $httpClient->sendRequest($this->requests->capture()))
+            ->returns(new Response(200, [], '{"success":true}'));
+
         $client = new TurnstileClient(config: $config, httpClient: $httpClient, requestFactory: $psr17, streamFactory: $psr17);
 
         $client->verify(token: 'token', clientIp: '');
 
-        Assert::notNull($this->lastRequest);
-        Assert::string($this->lastRequest->getBody()->__toString())->notContains('remoteip');
+        Assert::string($this->requests->last()->getBody()->__toString())->notContains('remoteip');
     }
 
     public function verifyParsesJsonAtMaxAllowedDepth(): void

@@ -7,7 +7,12 @@ namespace Rasuvaeff\Yii3Turnstile\Tests;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response;
 use Nyholm\Psr7\ServerRequest;
+use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
+use Rasuvaeff\Understudy\Arg;
+use Rasuvaeff\Understudy\Captor;
+use Rasuvaeff\Understudy\Invocation;
+use Rasuvaeff\Understudy\Understudy;
 use Rasuvaeff\Yii3Turnstile\TurnstileClient;
 use Rasuvaeff\Yii3Turnstile\TurnstileConfig;
 use Rasuvaeff\Yii3Turnstile\TurnstileRule;
@@ -24,9 +29,10 @@ use Yiisoft\Translator\Message\Php\MessageSource;
 use Yiisoft\Translator\SimpleMessageFormatter;
 use Yiisoft\Translator\Translator;
 use Yiisoft\Validator\Exception\UnexpectedRuleException;
-use Yiisoft\Validator\RuleHandlerInterface;
 use Yiisoft\Validator\RuleInterface;
 use Yiisoft\Validator\ValidationContext;
+
+use function Rasuvaeff\Understudy\when;
 
 #[Test]
 #[Covers(TurnstileRule::class)]
@@ -37,7 +43,8 @@ final class TurnstileRuleHandlerTest
 
     private TurnstileClient $client;
 
-    private ?RequestInterface $lastRequest = null;
+    /** @var Captor<RequestInterface> */
+    private Captor $requests;
 
     private Response $mockResponse;
 
@@ -46,13 +53,11 @@ final class TurnstileRuleHandlerTest
     {
         $config = new TurnstileConfig(siteKey: 'key', secret: 'test-secret', sendRemoteIp: true);
         $psr17 = new Psr17Factory();
-        $httpClient = (new FakeHttpClient())->withSendRequestCallback(
-            function (RequestInterface $request): Response {
-                $this->lastRequest = $request;
+        $httpClient = Understudy::for(ClientInterface::class);
+        $this->requests = Arg::captor(RequestInterface::class);
 
-                return $this->mockResponse;
-            },
-        );
+        when(fn() => $httpClient->sendRequest($this->requests->capture()))
+            ->answers(fn(Invocation $call): Response => $this->mockResponse);
         $this->client = new TurnstileClient(config: $config, httpClient: $httpClient, requestFactory: $psr17, streamFactory: $psr17);
 
         $this->handler = new TurnstileRuleHandler(client: $this->client);
@@ -112,8 +117,7 @@ final class TurnstileRuleHandlerTest
         $result = $handler->validate('token', new TurnstileRule(sendRemoteIp: true), new ValidationContext());
 
         Assert::true($result->isValid());
-        Assert::notNull($this->lastRequest);
-        $body = $this->lastRequest->getBody()->__toString();
+        $body = $this->requests->last()->getBody()->__toString();
         Assert::string($body)->contains('remoteip=1.2.3.4');
     }
 
@@ -124,8 +128,7 @@ final class TurnstileRuleHandlerTest
         $result = $this->handler->validate('token', new TurnstileRule(sendRemoteIp: true), new ValidationContext());
 
         Assert::true($result->isValid());
-        Assert::notNull($this->lastRequest);
-        $body = $this->lastRequest->getBody()->__toString();
+        $body = $this->requests->last()->getBody()->__toString();
         Assert::string($body)->notContains('remoteip');
     }
 
@@ -136,8 +139,7 @@ final class TurnstileRuleHandlerTest
         $result = $this->handler->validate('token', new TurnstileRule(secret: 'rule-secret'), new ValidationContext());
 
         Assert::true($result->isValid());
-        Assert::notNull($this->lastRequest);
-        $body = $this->lastRequest->getBody()->__toString();
+        $body = $this->requests->last()->getBody()->__toString();
         Assert::string($body)->contains('secret=rule-secret');
         Assert::string($body)->notContains('secret=test-secret');
     }
@@ -151,13 +153,10 @@ final class TurnstileRuleHandlerTest
     {
         Expect::exception(UnexpectedRuleException::class);
 
-        $this->handler->validate('token', new class implements RuleInterface {
-            #[\Override]
-            public function getHandler(): string|RuleHandlerInterface
-            {
-                return 'not-turnstile';
-            }
-        }, new ValidationContext());
+        $rule = Understudy::for(RuleInterface::class);
+        when(fn() => $rule->getHandler())->returns('not-turnstile');
+
+        $this->handler->validate('token', $rule, new ValidationContext());
     }
 
     public function emptyValueErrorIncludesPropertyParameter(): void
@@ -196,8 +195,7 @@ final class TurnstileRuleHandlerTest
         $result = $handler->validate('token', new TurnstileRule(sendRemoteIp: true), new ValidationContext());
 
         Assert::true($result->isValid());
-        Assert::notNull($this->lastRequest);
-        Assert::string($this->lastRequest->getBody()->__toString())->notContains('remoteip=');
+        Assert::string($this->requests->last()->getBody()->__toString())->notContains('remoteip=');
     }
 
     public function translatorTranslatesErrorMessage(): void
@@ -216,7 +214,11 @@ final class TurnstileRuleHandlerTest
 
         $config = new TurnstileConfig(siteKey: 'key', secret: 'test-secret');
         $psr17 = new Psr17Factory();
-        $httpClient = (new FakeHttpClient())->withSendRequestCallback(fn(): Response => $this->mockResponse);
+        $httpClient = Understudy::for(ClientInterface::class);
+
+        when(fn() => $httpClient->sendRequest(Arg::any()))
+            ->answers(fn(Invocation $call): Response => $this->mockResponse);
+
         $client = new TurnstileClient(config: $config, httpClient: $httpClient, requestFactory: $psr17, streamFactory: $psr17);
 
         $handler = new TurnstileRuleHandler(client: $client, translator: $translator, translationCategory: 'yii3-turnstile');
