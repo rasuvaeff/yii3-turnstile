@@ -75,7 +75,7 @@ final readonly class TurnstileRuleHandler implements RuleHandlerInterface
     private function translate(string $message): string
     {
         $translator = $this->translator ?? TurnstileRegistry::translator();
-        if ($translator === null) {
+        if (!$translator instanceof \Yiisoft\Translator\TranslatorInterface) {
             return $message;
         }
 
@@ -89,7 +89,7 @@ final readonly class TurnstileRuleHandler implements RuleHandlerInterface
     private function resolveClientIp(): ?string
     {
         $provider = $this->requestProvider ?? TurnstileRegistry::requestProvider();
-        if ($provider === null) {
+        if (!$provider instanceof \Yiisoft\RequestProvider\RequestProviderInterface) {
             return null;
         }
 

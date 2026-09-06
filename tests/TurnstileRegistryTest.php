@@ -6,7 +6,9 @@ namespace Rasuvaeff\Yii3Turnstile\Tests;
 
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response;
-use Psr\Http\Message\RequestInterface;
+use Psr\Http\Client\ClientInterface;
+use Rasuvaeff\Understudy\Arg;
+use Rasuvaeff\Understudy\Understudy;
 use Rasuvaeff\Yii3Turnstile\TurnstileClient;
 use Rasuvaeff\Yii3Turnstile\TurnstileConfig;
 use Rasuvaeff\Yii3Turnstile\TurnstileRegistry;
@@ -18,9 +20,15 @@ use Testo\Expect;
 use Testo\Lifecycle\AfterTest;
 use Testo\Lifecycle\BeforeTest;
 use Testo\Test;
+use Yiisoft\RequestProvider\RequestNotSetException;
 use Yiisoft\RequestProvider\RequestProvider;
+use Yiisoft\RequestProvider\RequestProviderInterface;
 use Yiisoft\Translator\Translator;
+use Yiisoft\Translator\TranslatorInterface;
 use Yiisoft\Validator\ValidationContext;
+
+use function Rasuvaeff\Understudy\verify;
+use function Rasuvaeff\Understudy\when;
 
 #[Test]
 #[Covers(TurnstileRegistry::class)]
@@ -34,16 +42,18 @@ final class TurnstileRegistryTest
     {
         $config = new TurnstileConfig(siteKey: 'key', secret: 'test-secret');
         $psr17 = new Psr17Factory();
-        $httpClient = (new FakeHttpClient())->withSendRequestCallback(
-            fn(RequestInterface $request): Response => new Response(200, [], '{"success":true}'),
-        );
+        $httpClient = Understudy::for(ClientInterface::class);
+
+        when(fn() => $httpClient->sendRequest(Arg::any()))
+            ->returns(new Response(200, [], '{"success":true}'));
+
         $this->client = new TurnstileClient(config: $config, httpClient: $httpClient, requestFactory: $psr17, streamFactory: $psr17);
     }
 
     #[AfterTest]
     public function tearDown(): void
     {
-        TurnstileRegistry::configure(client: $this->client, requestProvider: null, translator: null);
+        TurnstileRegistry::configure(client: $this->client);
     }
 
     public function registryReturnsNullBeforeConfiguration(): void
@@ -137,40 +147,57 @@ final class TurnstileRegistryTest
 
     public function handlerPrefersInjectedTranslatorOverRegistry(): void
     {
-        $registryTranslator = new FakeTranslator(translation: 'registry-error');
-        $injectedTranslator = new FakeTranslator(translation: 'error');
+        $registryTranslator = $this->translator('registry-error');
+        $injectedTranslator = $this->translator('error');
 
         TurnstileRegistry::configure(client: $this->client, translator: $registryTranslator);
 
         $handler = new TurnstileRuleHandler(client: $this->client, translator: $injectedTranslator);
         $handler->validate('', new TurnstileRule(), new ValidationContext());
 
-        Assert::same($registryTranslator->callCount(), 0);
-        Assert::same($injectedTranslator->callCount(), 1);
+        Understudy::unused($registryTranslator);
+        verify(fn() => $injectedTranslator->translate(Arg::any(), Arg::any(), Arg::any()), times: 1);
     }
 
     public function handlerPrefersInjectedRequestProviderOverRegistry(): void
     {
-        $registryProvider = new FakeRequestProvider();
-        $injectedProvider = new FakeRequestProvider();
+        $registryProvider = $this->requestProvider();
+        $injectedProvider = $this->requestProvider();
 
         TurnstileRegistry::configure(client: $this->client, requestProvider: $registryProvider);
 
         $handler = new TurnstileRuleHandler(client: $this->client, requestProvider: $injectedProvider);
         $handler->validate('token', new TurnstileRule(sendRemoteIp: true), new ValidationContext());
 
-        Assert::same($registryProvider->callCount(), 0);
-        Assert::same($injectedProvider->callCount(), 1);
+        Understudy::unused($registryProvider);
+        verify(fn() => $injectedProvider->get(), times: 1);
     }
 
     private function makeClient(string $responseBody): TurnstileClient
     {
         $config = new TurnstileConfig(siteKey: 'key', secret: 'test-secret');
         $psr17 = new Psr17Factory();
-        $httpClient = (new FakeHttpClient())->withSendRequestCallback(
-            fn(RequestInterface $request): Response => new Response(200, [], $responseBody),
-        );
+        $httpClient = Understudy::for(ClientInterface::class);
+
+        when(fn() => $httpClient->sendRequest(Arg::any()))
+            ->returns(new Response(200, [], $responseBody));
 
         return new TurnstileClient(config: $config, httpClient: $httpClient, requestFactory: $psr17, streamFactory: $psr17);
+    }
+
+    private function translator(string $translation): TranslatorInterface
+    {
+        $translator = Understudy::for(TranslatorInterface::class);
+        when(fn() => $translator->translate(Arg::any(), Arg::any(), Arg::any()))->returns($translation);
+
+        return $translator;
+    }
+
+    private function requestProvider(): RequestProviderInterface
+    {
+        $provider = Understudy::for(RequestProviderInterface::class);
+        when(fn() => $provider->get())->throws(new RequestNotSetException());
+
+        return $provider;
     }
 }

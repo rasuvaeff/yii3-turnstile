@@ -23,7 +23,7 @@ final class Turnstile extends Widget
     public function __construct(
         ?TurnstileConfig $config = null,
     ) {
-        if ($config !== null && $config->siteKey !== '') {
+        if ($config instanceof \Rasuvaeff\Yii3Turnstile\TurnstileConfig && $config->siteKey !== '') {
             $this->siteKey = $config->siteKey;
         }
     }
