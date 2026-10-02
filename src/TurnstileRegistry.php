@@ -10,6 +10,8 @@ use Yiisoft\Translator\TranslatorInterface;
 /**
  * Static registry populated during application bootstrap.
  * Allows TurnstileRuleHandler to work with SimpleRuleHandlerContainer (no-arg construction).
+ *
+ * @api
  */
 final class TurnstileRegistry
 {
