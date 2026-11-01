@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Mutation testing now counts code the tests execute without naming it in `#[Covers]`
+  (`infection --with-uncovered`), with `PublicVisibility` off and signature defaults ignored
+  as in the monorepo template; overall MSI 98% (minMsi 98). No `src/` or test changes.
 - Tests build their doubles with `rasuvaeff/understudy-testo` instead of
   hand-written fake classes: `FakeHttpClient`, `FakeRequestProvider` and
   `FakeTranslator` are gone. Request capture reads a typed `Arg::captor()`,
