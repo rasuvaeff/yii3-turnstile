@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.0.6 — 2026-11-23
+
+- Require `yiisoft/validator` ^2.6.2 for the fix to [GHSA-c4w6-v59v-38v5](https://github.com/yiisoft/validator/security/advisories/GHSA-c4w6-v59v-38v5).
 
 - Mutation testing now counts code the tests execute without naming it in `#[Covers]`
   (`infection --with-uncovered`), with `PublicVisibility` off and signature defaults ignored
@@ -43,4 +45,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 1.0.0 — 2026-06-01
 
 - Initial release: Cloudflare Turnstile widget, validator, PSR-18 client, Russian translations.
-
