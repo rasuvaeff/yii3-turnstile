@@ -205,7 +205,7 @@ final class TurnstileRuleHandlerTest
         $translator = new Translator(locale: 'ru');
         $categorySource = new CategorySource(
             'yii3-turnstile',
-            new MessageSource(dirname(__DIR__) . '/messages'),
+            new MessageSource(__DIR__ . '/../messages'),
             extension_loaded('intl')
                 ? new IntlMessageFormatter()
                 : new SimpleMessageFormatter(),
